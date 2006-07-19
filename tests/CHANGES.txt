@@ -1,0 +1,7 @@
+0.8.2
+- Added support for passing a list of GenericSetup extension profiles
+  to the setupPloneSite method.
+
+0.8.0
+- Added support for Plone 2.5.
+

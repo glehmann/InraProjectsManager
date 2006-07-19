@@ -1,0 +1,9 @@
+<dtml-comment>
+title: this is a title
+connection id :connection
+max_rows : 1000
+max_cache : 100
+cache_time : 10
+allow_simple_one_argument_traversal : 1
+</dtml-comment>
+SELECT Tablename FROM pg_tables

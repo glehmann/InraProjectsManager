@@ -1,0 +1,92 @@
+History of significant changes for PloneHelpCenter:
+
+   (name of developer listed in brackets)
+
+PloneHelpCenter 0.9
+
+    - Another template / i18n update.
+      [hannosch]
+
+    - Made it possible to have standalone objects outside the Help Center
+      (very useful for reference manuals, for example)
+      [limi]
+    
+    - Major overhaul of all i18n files.
+      [hannosch]
+
+    - actually start using the ADD_HELP_AREA_PERMISSION as the
+      add permission for HelpCenter, instead of the generic
+      'Add Portal Content' permission
+      [rafrombrc]
+
+    - fixed lots of failing and erroring unit tests.  got all
+      tests to pass w/ plones 2.0 and 2.1
+      [rafrombrc]
+
+    - Made Glossary's getItemsBySection() return sorted list.
+      [optilude]
+
+    - Made reference manual and todo navigation drop-downs select current page
+      [optilude]
+
+    - Removed Help Center workflow from TutorialPages for now. They should
+      probably just have a simple in-progress/finished marker workflow that
+      doesn't really affect permissions, but just whether they are listed
+      or not in the index/page navigation. Had to remove it because of permission
+      problems right now (if any pages are not published in a Tutorial, you get
+      permission denied on the entire Tutorial).
+      [limi]
+
+PloneHelpCenter 0.2
+
+    - Added Help Center portlet, this will aggregate published entries
+      from all the available Help Centers, and display links to the published 
+      help centers.
+      [limi]
+
+    - Added Glossary types, updated Help Center view
+      [limi]
+
+    - Added Link types
+      [Joel]
+
+    - Added ErrorReference types
+      [Joel]
+
+    - Added helpcenter_workflow & associate installation stuff.
+      [Joel]
+
+    - Cleaned up FAQFolder, HowtoFolder, TutorialFolder displays
+      [Joel]
+
+    - Folders now only list visible-to-users content
+      [Joel]
+
+    - Changed how versions are printed on pages: uses getVersions method
+      rather than macro. Also, only prints a versions: line if there is
+      anything in versions vocabulary--so, to create a help center that
+      doesn't really use versions, just leave the vocab for this blank.
+      It will still appear on Archetypes' forms, but won't show up
+      one view modes
+      [Joel]
+
+    - Cleaned up and refactored text/doc files.
+      [Joel]
+
+    - Made many small API changes throughout. Sorry, but now this
+      means that any existing Plone Help Centers will have to be migrated.
+      I doubt if there are enough out there to justify making a 
+      migration script. The API should be fairly stable from now on,
+      but keep in mind this is still only a 0.2 release ;)
+      [Joel]
+
+    - added an optional ReferenceField (controlled in config.py) to cross-
+      reference from a PHC-type to another Archetype in the portal. This 
+      shouldnt affect existing code. If you have ATReferenceBrowserWidget
+      installed its used instead of the dumb default ReferenceWidget.
+      [Jensens]
+
+PloneHelpCenter 0.1
+
+    - Development version
+
