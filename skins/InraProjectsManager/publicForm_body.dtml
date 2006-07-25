@@ -1,0 +1,57 @@
+<!-- ////////////////// LAYOUT FORMULAIRE ///////////////// -->
+
+<!-- toujours utiliser les fonctions suivantes de preference à du HTML -->
+
+<!-- dtml-var formTitle : le titre du formulaire -->
+<!-- dtml-var formDescription : la description du formulaire -->
+
+<!-- dtml-in formFields formFields boucle dans les champs du groupe en contexte, ou dans l'ensemble des champs
+     dtml-in "formFields('coordonnees') : boucle dans le groupe ou le champ en parametre
+     dtml-in "formFields(['NOM','PRENOM']) : boucle dans la liste des champs en parametre -->
+
+<!-- pour un champ en contexte, vous disposez des methodes
+        formFieldLabel (le label),
+        formFieldRender (la case), 
+        formFieldErrorLabel (le message d'erreur)  -->
+
+<!-- formGroups boucle dans les groupes, -->
+<!-- pour les groupes, vous disposez de la methode formGroupTitle : affiche le titre du groupe en contexte -->
+
+<!-- operatorButton : affiche le bouton operateur, si on est dans un formulaire de recherche -->
+<!-- orderList : affiche la liste des champs pouvant servir de critere de tri, si on est dans un formulaire de recherche -->
+<!-- submitButton : affiche le bouton de soumission si l'execution est activee -->
+
+<!-- request : affiche le texte de la requete -->
+
+
+<!-- ######################################## EXEMPLE ############################# -->
+
+<h1><dtml-var title></h1> <!-- properties of the form  -->
+<dtml-var Description>
+
+<dtml-in formGroups> 
+<h3><dtml-var formGroupTitle></h3>
+
+<table>
+
+<dtml-in formFields>
+
+      <tr>
+      <td><dtml-var formFieldLabel></td>
+      <td><dtml-var formFieldRender></td>
+      <td><dtml-var formFieldErrorLabel></td>
+      </tr>
+
+
+</dtml-in>
+
+</table>
+
+<dtml-if sequence-end><dtml-var operatorButton></dtml-if>
+
+<hr />
+</dtml-in>
+
+<table>
+<tr><td><dtml-var orderList></td><td><dtml-var submitButton></td></tr>
+</table>

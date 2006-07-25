@@ -1,0 +1,71 @@
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en"
+      lang="en"
+      metal:use-macro="here/main_template/macros/master"
+      i18n:domain="plone">
+    <body>
+    
+<metal:main fill-slot="main">
+
+<span tal:define="global tableName here/getTableName ; global tableStructure python:here.getDbTableStructure()" />
+<span tal:define="global newReference python:not('form' in here.objectIds())" tal:content="newReference"/>
+<span tal:define="global publicForm_allowed python:here.isViewOnPublicForm()" />
+
+<h1 tal:content="tableName" />
+
+
+<form name="table_properties_edit_form" method="get" tal:attributes="action python:['editViewProperties','setViewProperties'][int(newReference)]">
+
+
+	<h2>Fields Properties</h2>
+	<table>
+	<tr><th /><th>Id</th><th>Label</th><th tal:condition="newReference">Type</th><th>Maximum (in octets)	</th><th>Non Null</th><th tal:condition="publicForm_allowed">Field on public form</th></tr>
+	<!-- field : on va le chercher dans la liste associee, dans DBStructure, au nom de la table -->
+	
+	<tr tal:repeat="field tableStructure">
+	<span tal:define="fieldStructure python:tableStructure[field]" tal:condition="python:not(here.isSystemDbField(field))">
+	
+	<td>
+		<a tal:condition="not:newReference" tal:attributes="href python:'form/'+field+'/manage_workspace'"> <img tal:attributes="src python:'misc_/Formulator/'+str(here.getViewField(field).meta_type)+'.gif'" /></a>
+	</td>
+	<td tal:content="field" />
+	
+	<td>
+
+		<input type="text" tal:attributes="name python:field+'.label:string' ; value python:fieldStructure['label']"/>
+	</td>
+	<td tal:condition="newReference">
+			<select tal:attributes="name python:field+'.type'">
+			<option tal:repeat="fieldType python:here.getFormTypesOfDBType(fieldStructure['type'])" tal:content="fieldType" width="20"/>
+			</select>
+	</td>
+	<td>
+		<input cols="5" type="text" tal:attributes="name python:field+'.width'; value python:fieldStructure['width']"/>
+		</td>
+	<td>
+		<input tal:condition="python:fieldStructure['null']" tal:attributes="name python:field+'.null'" type="checkbox" value="1" checked="" />
+		<input tal:condition="python:not(fieldStructure['null'])" tal:attributes="name python:field+'.null'" type="checkbox" value="1" />
+	</td>
+	
+	<td tal:condition="publicForm_allowed">
+		<input tal:condition="python:fieldStructure['on_public_form']" tal:attributes="name python:field+'.on_public_form'" type="checkbox" value="1" checked="" />
+		<input tal:condition="python:not(fieldStructure['on_public_form'])" tal:attributes="name python:field+'.on_public_form'" type="checkbox" value="1" />
+	</td>
+	</span>
+	</tr>
+	</table>
+	
+
+	<input type="submit" value="Submit" />
+	
+</form>
+<p>
+<form tal:condition="not:newReference" action="initializeForm">
+
+	<input type="submit" value="Initialize this table" />
+	
+</form>
+</p>
+</metal:main>
+
+</body>
+</html>

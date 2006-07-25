@@ -6,12 +6,17 @@ from AccessControl import ClassSecurityInfo
 from Products.ATContentTypes.content.folder import ATFolder
 from Products.Archetypes.public import Schema, registerType, DisplayList
 from Products.Archetypes.public import StringField, ComputedField, LinesField, IntegerField,CMFObjectField
-from Products.Archetypes.public import SelectionWidget, MultiSelectionWidget, ComputedWidget, StringWidget, LabelWidget
+from Products.Archetypes.public import SelectionWidget, MultiSelectionWidget, ComputedWidget, StringWidget, LabelWidget,LinesWidget
+from Products.CMFCore.utils import getToolByName
 
 from Products.InraProjectsManager.interfaces import IInraProjectsManager
 from Products.InraProjectsManager.permissions import AddInraProjectManager, AddInraProjects
 
 from ProjectViewModelsManager import ProjectViewModelsManager
+
+from Products.InraProjectsManager import outils
+from Products.InraProjectsManager.permissions import *
+from Products.InraProjectsManager.config import *
 
 def addInraProjectsManager(self,id,REQUEST=None,**kwargs):
 	""" adds an Inra Projects Manager """
@@ -27,7 +32,7 @@ factory_type_information = (
 	   'content_icon':'multiform.gif',
 	    'product':'InraProjectsManager',
 	     'filter_content_types':True,
-	      'allowed_content_types':('InraProject','ProjectViewModelsManager'),
+	      'allowed_content_types':('InraProject'),
 	     'factory':'addInraProjectsManager',
 	      'default_view':'folder_listing',
 	      'view_methods':('folder_listing','view_request_form','view_projects'),
@@ -64,8 +69,25 @@ InraProjectsManagerSchema = Schema((
 	      			mutator="majConnection",
 		  		widget=StringWidget(label="The connection string"),
 	   ),
-
-
+	LinesField('emails',
+		read_permission=View,
+		write_permission=AddInraProjectManager,
+		required=True,
+		description="The email where to notify new requests",
+		widget=LinesWidget(label="Emails adresses where requests will be notified"),
+		),
+	
+	StringField('default_confidentiality',
+		write_permission=AddInraProjectManager,
+		vocabulary=DisplayList(CONFIDENTIALITY_LEVELS),
+		read_permission=View,
+		required=True,
+		description="The default confidentiality level",
+		mutator="setDefault_confidentiality",
+		widget=SelectionWidget(
+			label="The default confidentiality level",
+			),
+		),
 	))
 
 class InraProjectsManager(ATFolder):
@@ -140,45 +162,99 @@ class InraProjectsManager(ATFolder):
 			self.connection.connection_string = old_connection_info
 			self.connection_info = old_connection_info
 			return False
-		
-			
-	# ############################## PROJECTS RELATED METHODS
+	
+	
 	
 	def getInraProjects(self,):
 		""" the list of projects actually stored """
 	
-	def addInraProject(self,REQUEST):
-		""" adds a project (from requestForm) """
-	
-		
-	def executeRequestForm(self,):
-		""" manages displaying, submission, validation, treatment of the form provided to public. always returns XHTML code. uses requestView model with publicRequestFieldsList """
-	
-	def setupRequestForm(self,):
-		""" creates or updates the public request form """
-		pass
+	# ################# MODELS MANAGER RELATED METHODS
 	
 	security.declareProtected("edit_models",AddInraProjectManager)
 	def edit_models(self,REQUEST=None,**kwargs):
 		""" creates the models manager if it doesn't exists. else, displays the edit form """
+		#return "toto"
 		models = self.getProjectViewModelsManager()
-		REQUEST.response.redirect(models.absolute_url())
+		return REQUEST.response.redirect(models.absolute_url())
 	
 	security.declareProtected("getProjectViewModelsManager",AddInraProjectManager)
 	def getProjectViewModelsManager(self):
 		""" gets the models manager at self.model , and adds it if not exists"""	
 		
 		if not(hasattr(self,"models")):
-			self.invokeFactory('ProjectViewModelsManager','models')
+			getToolByName(self,"portal_types").constructContent('ProjectViewModelsManager',self,'models')
 			obj = self['models']
 			obj.setTitle("Models Manager")
 			obj.reindexObject()
 			
 		return self.models
-
+	
+	security.declareProtected("getModelsList",View)
+	def getModelsList(self,):
+		""" returns a dict str modelName : obj modelObject, modelObject = False if modelhas not been setup """
+		return self.models.getModelsList()
+	
+	# ############## PUBLIC FORM RELATED METHODS
+	
+	def getPublicForm(self):
+		""" gets the public form manager at self.publicForm, creates if not exists """
+		
+		if not "publicForm" in self.objectIds():
+			getToolByName(self,"portal_types").constructContent('PublicProjectForm',self,'publicForm')
+			obj = self['publicForm']
+			obj.setTitle(self.Title()+" Form")
+			obj.reindexObject()
+		
+		return self.publicForm
+	
+	def labelFromId(self,label):
+		""" """
+		return outils.labelFromId(label)
+	
+	# ########################## PROJECT CREATION
+	
+	def realize_publicForm_submission(self,REQUEST=None):
+		""" executes the treatment of submission form by the creation of a new project """
+		
+		person_in_charge = self.project_affectation_script()
+		
+		projectId = self.addInraProjectDbEntry(REQUEST,person_in_charge)
+		
+		authenticatedUser = getToolByName(self,'portal_membership').getAuthenticatedMember()
+		
+		newProject = self.createInraProject(projectId,person_in_charge,authenticatedUser,REQUEST)
+		
+		#newProject._sendProjectCreationNotification()
+		
+		
+		REQUEST.response.redirect(newProject.absolute_url())
+		
+		
+	def createInraProject(self,projectId,person_in_charge,customer_in_charge,REQUEST):
+		""" creates the inra project with id projectId managed by person_in_charge, 
+		with the publicForm datas stored in REQUEST """
+		
+		project_PloneId = 'project_'+str(projectId)
+		getToolByName(self,"portal_types").constructContent('InraProject',self,project_PloneId)
+		obj = self[project_PloneId]
+		
+		title = "Projet "+str(projectId)+" : "+customer_in_charge.name
 			
-class InraRequestForm(object):
-	""" The object that manages the public request form, its validation and its submission """
-	pass
+		obj.setTitle(title)
+		
+		obj.reindexObject()
+		
+		return obj
+	
+	def _sendProjectCreationNotification(self,newInraProject,REQUEST):
+		""" sends a mail to announce the creation of a new project """
+		
+	def addInraProjectDbEntry(self,REQUEST,person_in_charge):
+		""" adds the entry of a new project in the database from the public form request datas """
+		projectId = 12
+		return projectId
+		
+	
+	
 	
 registerType(InraProjectsManager)

@@ -63,4 +63,17 @@ def initialize(context):
             constructors = (content.ProjectViewModels.addProjectViewModel,),
             permission = ADD_MANAGER_PERMISSION,
             )
+	    
+        context.registerClass(
+            meta_type = content.ProjectViewModels.ProjectViewModel.archetype_name,
+            constructors = (content.ProjectViewModels.addProjectViewModel,),
+            permission = ADD_MANAGER_PERMISSION,
+            )
+	    
+        context.registerClass(
+            meta_type = content.PublicProjectForm.PublicProjectForm.archetype_name,
+            constructors = (content.PublicProjectForm.addPublicProjectForm,),
+            permission = ADD_MANAGER_PERMISSION,
+            )	    
+	    
 	pass

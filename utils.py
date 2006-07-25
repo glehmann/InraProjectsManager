@@ -1,52 +1,15 @@
-from Products.CMFCore.interfaces.Discussions import DiscussionResponse as IDiscussionResponse
 
-def discussion_notify(comment_on_object, variables = {}):
-    portal = comment_on_object.portal_url.getPortalObject()
+def labelFromId(self,id):
+	""" cree un label a partir de l'id majuscule premiere lettre + minuscules et espaces a la place des _"""
+	id = id[0].upper() + id[1:].lower()
+	id = id.replace("_"," ")
+	id = id.replace("ee","ée")
+	return id
 
-    send_from_address = portal.portal_properties.email_from_address
-    send_from_name = portal.portal_properties.email_from_name
-    
-    mt = portal.portal_membership
-    if IDiscussionResponse.isImplementedBy(comment_on_object):
-        owner = comment_on_object.Creator()
-        if owner:
-            member = mt.getMemberById(owner)
-            if member:
-                send_to_address = member.getProperty('email')
-
-                if send_to_address:
-                    
-                    mail_text = portal.discussion_reply_notify_template(portal, comment_on_object=comment_on_object, send_from_address=send_from_address, send_from_name=send_from_name, send_to_address=send_to_address, **variables)
-                    subject = "New comment on " + comment_on_object.title_or_id()
-
-                    host = portal.plone_utils.getMailHost()
-                    encoding = portal.plone_utils.getSiteEncoding()
-                    envelope_from = send_from_address
-                    result = host.secureSend(mail_text, send_to_address,
-                                             envelope_from, subject=subject,
-                                             subtype='plain', charset=encoding,
-                                             debug=False, From=send_from_address)
-
-        parents = comment_on_object.parentsInThread()
-        if not parents:
-            return
-        comment_on_object = parents[0]
-            
-    owner = comment_on_object.Creator()
-    if owner:
-        member = mt.getMemberById(owner)
-        if member:
-            send_to_address = member.getProperty('email')
-
-            if send_to_address:
-
-                mail_text = portal.discussion_notify_template(portal, comment_on_object=comment_on_object, send_from_address=send_from_address, send_from_name=send_from_name, send_to_address=send_to_address, **variables)
-                subject = "New comment on " + comment_on_object.title_or_id()
-
-                host = portal.plone_utils.getMailHost()
-                encoding = portal.plone_utils.getSiteEncoding()
-                envelope_from = send_from_address
-                result = host.secureSend(mail_text, send_to_address,
-                                         envelope_from, subject=subject,
-                                         subtype='plain', charset=encoding,
-                                         debug=False, From=send_from_address)
+def normalizeSQL(self,fieldValue):
+	""" returns a value adaptated to sql input
+	returns none if null """
+	if not(fieldValue):
+		return None
+	else:
+		return fieldValue

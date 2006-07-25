@@ -1,0 +1,33 @@
+
+
+
+<dtml-try>
+        <!-- valide le contenu du formulaire. s'il y a une erreur, instancie l'objet error_value -->
+        <dtml-call "form.validate_all_to_request(REQUEST)">
+
+
+<dtml-except FormValidationError>
+      
+      <!-- en cas d'erreur de validation - , affiche le formulaire, avec les messages d'erreur eventuels -->
+	<dtml-var "form.header()">
+	<dtml-var publicForm_body>
+	<dtml-var "form.footer()">
+
+<dtml-else>
+
+
+      <dtml-if not(emptyForm())">
+      <!-- si le formulaire n'est pas vide ou si on a demande l'acces direct vers une fiche, on affiche les resultats -->
+      
+         <dtml-call realize_publicForm_submission>
+
+      <dtml-elif "emptyForm()">
+            <!-- si le formulaire est vide, bien entendu, on  l'affiche -->
+	<dtml-var "form.header()">
+	<dtml-var publicForm_body>
+	<dtml-var "form.footer()">
+	
+      </dtml-if>
+</dtml-try>
+
+

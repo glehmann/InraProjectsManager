@@ -1,0 +1,18 @@
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en"
+      lang="en"
+      metal:use-macro="here/main_template/macros/master"
+      i18n:domain="plone">
+      
+      
+<metal:css fill-slot="css_slot">
+        <link rel="stylesheet" type="text/css" media="screen" href="" tal:attributes="href string:$portal_url/plonedebformulator.css" />
+    </metal:css>
+
+    <body>
+
+<div metal:fill-slot="main">
+	<span tal:replace="structure python:here.execute_publicForm(here.REQUEST)" />
+</div>
+
+    </body>
+</html>
