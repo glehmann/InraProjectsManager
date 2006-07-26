@@ -181,14 +181,16 @@ class PublicProjectForm(OrderedBaseFolder):
 		form = self.publicForm.form
 		
 		
-		# deletes fields in publicForm but not 
+		# deletes fields in publicForm but not those of model
 		form.manage_delObjects([publicFieldId for publicFieldId in form.get_field_ids() \
 					if not(publicFieldId in modelFieldsIds)])
 		test = ""
-		for modelField in modelFieldsList:
+		for modelField in modelFieldsList: # updates all the public fields
 			test += modelField.getId()
 			self.updateField(modelField)
 		
+		self.getFieldsGroups() # recalculate fields groups
+			
 		#return test
 		self._isUpdate = True
 		
@@ -233,20 +235,8 @@ class PublicProjectForm(OrderedBaseFolder):
 		
 		return modelFieldsList
 	
-	security.declareProtected(View,'getFieldsGroups')
-	def getFieldsGroups(self):
-		""" returns a dictionary of table_names and the list of public fields related to """
+				
 
-		publicFieldsList = self.getPublicFieldsList()
-		fieldsGroups = {}
-		for field in publicFieldsList:
-			try:
-				fieldsGroups[publicFieldsList[field]].append(field)
-			except KeyError:
-				fieldsGroups[publicFieldsList[field]] = [field]
-		
-		return fieldsGroups
-		
 				
 	# ################# FORM DISPLAYING AND EXECUTION ######
 	
@@ -263,6 +253,7 @@ class PublicProjectForm(OrderedBaseFolder):
 		
 		
 		if REQUEST:
+			
 			try:
 				self.form.validate_all_to_request(REQUEST)
 			
@@ -281,8 +272,9 @@ class PublicProjectForm(OrderedBaseFolder):
 					self.form.footer()
 
 			else:
-				self.realize_publicForm_submission(REQUEST=REQUEST)
-				return self.publicForm_post_script()
+				viewFieldsValuesDictionary = self.getViewFieldsValuesDictionaryFromRequest(REQUEST)
+				self.realize_publicForm_submission(viewFieldsValuesDictionary)
+				
 			
 	def emptyForm(self,REQUEST=None,**kwargs):
 
@@ -291,16 +283,56 @@ class PublicProjectForm(OrderedBaseFolder):
 		for field in self.form.get_fields():
 			 if REQUEST.get(field.getId()):
 				 return False
-	
 
+	#  REQUEST DATA ANALYSE
 	
+	def getViewFieldsValuesDictionaryFromRequest(self,REQUEST):
+		""" returns a dictionary :
+			
+			{str viewClass:{str fieldName: value}}
+			
+			where
+			viewClass are views whose model has been setup,
+			fieldName the public fields names
+			value is the request value
+			
+			}
+		"""
+		# getFieldsGroups returns the structure of public form
+		fieldsGroups = self.getFieldsGroups()
 		
-	# ################ REQUEST EXECUTION
-	
+		viewFieldsValuesDictionary = {}
+		
+		for tableName in fieldsGroups:
+			viewClass = self.models.getViewOfTable(tableName)
+			viewFieldsValuesDictionary[viewClass] = {}
+			for publicField in fieldsGroups[tableName]:
+				fieldName = publicField.id
+				value = REQUEST[tableName+"_in_"+publicField.id]
+				viewFieldsValuesDictionary[viewClass][fieldName] = value
+		
+		return viewFieldsValuesDictionary
+			
+	security.declareProtected(View,'getFieldsGroups')
+	def getFieldsGroups(self):
+		""" returns a dictionary of table_names and the list of public fields related to """
+		
+		if not self.isUpdate() or not hasattr(self,"_fieldsGroups"):
+			publicFieldsList = self.getPublicFieldsList()
+			self._fieldsGroups = {}
+			for field in publicFieldsList:
+				try:
+					self._fieldsGroups[publicFieldsList[field]].append(field)
+				except KeyError:
+					self._fieldsGroups[publicFieldsList[field]] = [field]
+		
+		return self._fieldsGroups
+			
+	'''
 	def getPublicFieldSQLAdress(self,publicField):
 		fieldId = field.getId()
 		return fieldId.replace('_in_','.')
-		
+	'''	
 	 # ######################################################################
 	security.declareProtected(View,'contextFieldsList')
 	def contextFieldsList(self,parametre=[]):
@@ -366,10 +398,6 @@ class PublicProjectForm(OrderedBaseFolder):
 		return NamesStrList
 
 				
-	def getPkeys(self):
-		""" gets the pkeys related to the form """
-		return getattr(self.references,self.tableName).primary_keys
-		
 	security.declareProtected(View,'entryRequest')
 	
 	'''

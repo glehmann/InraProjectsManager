@@ -2,9 +2,12 @@ DROP TABLE inra_projects CASCADE;
 CREATE TABLE inra_projects
 (
 project_id__ SERIAL PRIMARY KEY,
-user_in_charge__ VARCHAR(20),
-state__ VARCHAR(10) DEFAULT 'submitted'
+user_in_charge__ VARCHAR(32) NOT NULL,
+customer_in_charge__ VARCHAR(32) NOT NULL,
+state__ VARCHAR(10) NOT NULL DEFAULT 'pending'
    CHECK (state__ IN ('pending','refused','work_in_progress','closed')),
+confidentiality__ VARCHAR(10) NOT NULL DEFAULT 'public'
+   CHECK (confidentiality__ IN ('public','protected','private')),
 open_date__ DATE DEFAULT CURRENT_DATE,
 decision_date__ DATE,
 close_date__ DATE ,
@@ -19,11 +22,9 @@ CREATE TABLE project_requests
 	request_history_id__ SERIAL PRIMARY KEY,
 	date__ DATE DEFAULT CURRENT_DATE,
 	comment__ VARCHAR(256),
-	confidentiality__ VARCHAR(10)
-		CHECK (confidentiality__ IN ('public','platform','confidential')),
 	descriptif TEXT,
 	delais DATE,
-	urgence VARCHAR(20),
+	urgence VARCHAR(32),
 	cible VARCHAR(11)
 		CHECK (cible IN ('demandeur', 'laboratoire')),
 	type_des_donnees TEXT,
@@ -34,7 +35,6 @@ DROP TABLE project_users CASCADE;
 CREATE TABLE project_users
 (
 	user_name__ VARCHAR(32) NOT NULL PRIMARY KEY,
-	users_ TEXT,
 	nom VARCHAR(32) NOT NULL,
 	mail VARCHAR(32) NOT NULL,
 	nom_du_labo VARCHAR(32),

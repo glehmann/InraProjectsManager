@@ -82,7 +82,6 @@ factory_type_information = (
 	},
 )
 
-#  
 
 ProjectViewModelsManagerSchema = Schema((
 	LinesField('modelsList',
@@ -116,7 +115,7 @@ class ProjectViewModelsManager(OrderedBaseFolder):
 		self.modelsList = modelsList
 		self.getPublicForm().setUnupdated()
 
-	security.declareProtected("getViewDbTables",AddInraProjectManager)
+	
 	def getViewDbTables(self,):
 		""" returns the list of the tables in the database, view Names and View Classes that corresponds to a view managed by this product """
 		
@@ -125,6 +124,13 @@ class ProjectViewModelsManager(OrderedBaseFolder):
 		
 		return [(projectView.viewLabel,projectView._tableName,projectView) for projectView in projectViewsList if projectView._tableName in dbTablesList]
 	
+	def getViewOfTable(self,tableName):
+		""" returns view of table """
+		projectViewsList = getProjectViewsList()
+		for view in projectViewsList:
+			if view._tableName == tableName:
+				return view
+		
 	def _getProjectView(self,viewName):
 		""" returns the view class named viewName """
 		viewDbTables = self.getViewDbTables()
@@ -134,7 +140,7 @@ class ProjectViewModelsManager(OrderedBaseFolder):
 		#raise "Project View is not managed"
 	
 			
-	security.declareProtected("getDbTablesList",AddInraProjectManager)
+	
 	def getDbTablesList(self,):
 		""" returns the list of database tables """
 		
@@ -163,7 +169,7 @@ class ProjectViewModelsManager(OrderedBaseFolder):
 	
 	# ###################### MODELS GETTERS
 		
-	security.declareProtected("getModelsList",AddInraProjectManager)
+	security.declareProtected("getModelsList",View)
 	def getModelsList(self,):
 		""" returns a dict str modelName : obj modelObject, modelObject = False if modelhas not been setup """
 		
@@ -182,6 +188,7 @@ class ProjectViewModelsManager(OrderedBaseFolder):
 				
 		return modelsList
 	
+	security.declareProtected("getSetupModels",View)
 	def getSetupModels(self):
 		""" returns the list of models that have been setup """
 		modelsList = self.getModelsList()
@@ -201,6 +208,16 @@ class ProjectViewModelsManager(OrderedBaseFolder):
 		return getattr(self,modelName), modelsList[modelName]
 	
 	
+	'''
+	def getModelOfTable(self,tableName):
+		""" returns the model which table_name is named tableName """
+		modelsList = self.getSetupModels()
+		for model in modelsList:
+			if model.getTableName() == tableName:
+				return model
+	'''		
+		
+	
 	security.declareProtected("_setModel",AddInraProjectManager)
 	def _createModel(self,modelName):
 		getToolByName(self,'portal_types').constructContent('ProjectViewModel',modelName)
@@ -210,7 +227,7 @@ class ProjectViewModelsManager(OrderedBaseFolder):
 
 	
 
-	security.declareProtected("_get_modelsList_vocabulary",AddInraProjectManager)
+	security.declareProtected("_get_modelsList_vocabulary",View)
 	def _get_modelsList_vocabulary(self):
 		viewsList = self.getViewDbTables()
 		

@@ -15,14 +15,6 @@ class IInraProjectsManager(Base):
 	
 	# ############## 
 	
-	def getPublicRequestFieldsList(self):
-		""" the list of request view fields used in public request form """
-		pass
-	
-	def setRequestForm(self):
-		""" sets the public request form """
-		pass
-	
 	def getManagedViewsList(self):
 		""" list of views on the projects managed by this projects manager """
 		pass
@@ -57,21 +49,22 @@ class IInraProjectsManager(Base):
 		""" returns the list of models that have been setup """	
 	
 	
-	# ########### PROJECTS MANAGEMENT
+	# ########### PROJECTS CREATION
 		
-	def realize_publicForm_submission(self,REQUEST=None,**kwargs):
+	def realize_publicForm_submission(self,viewFieldsValuesDictionary):
 		""" executes the treatment of submission form by the creation of a new project """
 	
 	def addInraProjectDbEntry(self,REQUEST=None,**kwargs):
 		""" adds the entry of a new project in the database from the public form request datas
 		 returns the int projectId
 		 """
-	
+		 
+	def getNextProjectId(self):
+		""" returns the value of next project id in the database - inra_projects table """
 			
-	def createInraProject(self,projectId,person_in_charge,customer_in_charge,REQUEST=None,**kwargs):
+	def createInraProject(self,projectId,person_in_charge,customer_in_charge,viewFieldsValuesDictionary):
 		""" creates the inra project with id projectId managed by person_in_charge, 
-		with the publicForm datas stored in REQUEST """
-			
+		with the publicForm datas stored in viewFieldsValuesDictionary """
 		
 class IInraProject(Base):
 	""" Provides an object that manages a project """
@@ -79,26 +72,32 @@ class IInraProject(Base):
 	
 	def getState(self):
 		""" the state of the project : , working, refused, aborted, finished"""
-	def getLife(self):
+		
+	def getLiveLevel(self):
 		""" the state of the project document : live, archive, test or trash """
 	
 	def getConfidentiality(self):
 		""" the confidentiality level : public, inra, confidential"""
 	
+	
 	def getProjectDbKey(self,):
 		""" gets the identifier of that project in the database """
 	
-	def createViews(self,):
-		""" creates the views of the project """
+	def initProjectViews(self,viewFieldsValuesDictionary):
+		""" creates the views of the project and feed them with public form values """
 		pass
 	
 	def getView(self,viewNameStr):
 		""" gets the view viewNameStr """
 		pass
 	
+	def getViews(self):
+		""" returns the dict of views """
+		
 class IProjectView(Base):
 	""" abstract class interface.
-	a projectView subclass instance provides a view on an aspect of the project : project definition, ressources, reports, etc 
+	a projectView subclass instance provides a view on an aspect of the project : project definition, ressources, reports, etc. 
+	it is a set of functionnalities for the management of the TableName database table
 	each view type may have its particular class
 	
 	"""
@@ -129,6 +128,9 @@ class IProjectViewModelsManager(Base):
 	def getViewDbTables(self,):
 		""" returns the list of the tables in the database that corresponds to a view managed by this product """
 	
+	def getViewOfTable(self,tableName):
+		""" returns the view which table is named tableName """
+		
 	def getDbTablesList(self,):
 		""" returns the list of database tables """
 
@@ -138,7 +140,8 @@ class IProjectViewModelsManager(Base):
 	def edit_model(self,modelName,**kwargs):
 		""" displays the model manager """
 		
-
+	def getModelOfTable(self,tableName):
+		""" returns the model which table_name is named tableName """
 		
 class IProjectViewModel(Base):
 	""" contains information about the database table structure of a view, and its representation in the InraProjectsManager context :

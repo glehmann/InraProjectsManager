@@ -6,7 +6,9 @@ from Products.Archetypes.public import SelectionWidget, MultiSelectionWidget, Co
 
 from Products.InraProjectsManager.interfaces import IProjectView
 
-class ProjectView(object):
+from OFS.SimpleItem import SimpleItem
+
+class ProjectView(SimpleItem):
 	""" abstract class interface.
 	a projectView subclass instance provides a view on an aspect of the project : project definition, ressources, reports, etc 
 	each view type may have its particular class
@@ -17,9 +19,11 @@ class ProjectView(object):
 	
 	_on_public_form = False # true if fields for this view are used in the public form
 	
+	
 	def getModel(self,):
 		""" gets the model for this view, defined in the context of a InraProjectsManager instance 
 		"""
+		
 		pass
 	
 	def getProjectViewId(self,):
@@ -31,6 +35,10 @@ class ProjectView(object):
 	def getTableName(self):
 		""" gets the table of that view """
 		pass
+	
+	def createDbEntry(self,fieldsValuesDictionary):
+		""" feeds the table with datas from the public form """
+		
 
 class ProjectRequest(ProjectView):
 		"""  provides a manager for the entry of contextual project in project requests table """

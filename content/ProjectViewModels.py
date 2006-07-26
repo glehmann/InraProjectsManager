@@ -77,6 +77,7 @@ class ProjectViewModel(OrderedBaseFolder):
 	
 	security = ClassSecurityInfo()
 	
+	_deleteCache = False
 	
 	_DbTableStructure = None
 	_fieldsListRequest = None # the zsql request for the table fields 
@@ -86,13 +87,17 @@ class ProjectViewModel(OrderedBaseFolder):
 	security.declareProtected("getTableName",View)
 	def getTableName(self):
 		""" gets the database table name for this view """
-		return self.getViewClass()._tableName
+		if not hasattr(self,"_tableName") or self._deleteCache:
+			self._tableName = self.getViewClass()._tableName
+		return self._tableName
 	
 	security.declareProtected("getViewClass",View)
 	def getViewClass(self):
 		""" recupere la classe de la vue du modele courant
 		 in our implementation the model instance has the same name has the view class """
-		return getattr(ProjectViews,self.getId())
+		if not hasattr(self,"_viewClass") or self._deleteCache:
+			self._viewClass = getattr(ProjectViews,self.getId())
+		return self._viewClass
 		
 	
 	# ################################### TABLE STRUCTURE ######################

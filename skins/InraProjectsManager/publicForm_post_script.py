@@ -7,7 +7,7 @@
 # SCRIPT S'EXECUTANT AVANT LA RECHERCHE, affiche le retour en haut de la page
 # Variables contextuelles utiles :
 form = context.publicForm.form                     # LE FORMULAIRE
-formFieldsGroups = context.getFieldsGroups() # LISTE DES IDENTIFIANTS DES CHAMPS DU FORMULAIRE
+formFieldsGroups = context.publicForm.getFieldsGroups() # LISTE DES IDENTIFIANTS DES CHAMPS DU FORMULAIRE
 
 REQUEST = container.REQUEST             # LA REQUETE
 # VERIFIER LA VALEUR D'UNE REQUETE :

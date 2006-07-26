@@ -6,4 +6,4 @@
 ##bind subpath=traverse_subpath
 ##parameters=
 
-return context.portal_membership.getMemberById('thomasdesvenainmembre')
+return context.portal_membership.getMemberById('thomasdesvenainmember')

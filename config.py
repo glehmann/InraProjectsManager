@@ -10,6 +10,10 @@ GLOBALS = globals()
 DB_TABLES_LIST_ZSQLFile = 'InraProjectsManager/SQLRequests/DBTablesList.zsql' # list of all db tables
 DB_TABLE_FIELDS_ZSQLFile = 'InraProjectsManager/SQLRequests/DBTableFields.zsql' # list of fields of a table, with Type and Not null information TODO : UNIQUE, width
 
+NEXT_PROJECT_ID_ZSQLFile = 'InraProjectsManager/SQLRequests/NextProjectId.zsql' # id of next project
+ADD_INRA_PROJECT_ZSQLFile = 'InraProjectsManager/SQLRequests/AddInraProject.zsql' # add a new project
+UPDATE_PROJECT_VALUE_ZSQLFile = 'InraProjectsManager/SQLRequests/UpdateProjectValue.zsql' # update a simple project value
+
 CONFIDENTIALITY_LEVELS = (
 	("private","Réservé à l'équipe"),
 	("protected","Réservé à la plateforme"),

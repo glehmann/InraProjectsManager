@@ -12,6 +12,8 @@ from Products.CMFCore.utils import getToolByName
 from Products.InraProjectsManager.interfaces import IInraProjectsManager
 from Products.InraProjectsManager.permissions import AddInraProjectManager, AddInraProjects
 
+from Products.CMFCore.FSZSQLMethod import FSZSQLMethod
+
 from ProjectViewModelsManager import ProjectViewModelsManager
 
 from Products.InraProjectsManager import outils
@@ -47,7 +49,15 @@ factory_type_information = (
 	      		'action':'edit_models',
 		 	'permissions':(AddInraProjectManager,)},
 			
+			{'id':'formulaire',
+	   		'name':'formulaire',
+	      		'action':'publicForm',
+		 	'permissions':(AddInraProjectManager,)},
+			
+			
 			),
+			
+			
 
 	   'aliases':(
 	    	{'view':'(selected layout)',
@@ -99,6 +109,7 @@ class InraProjectsManager(ATFolder):
 	
 	__implements__ = ATFolder.__implements__ + (IInraProjectsManager,)
 	
+	
 	archetype_name="Inra Projects Manager"
 	
 	schema = ATFolder.schema.copy() + InraProjectsManagerSchema
@@ -106,7 +117,7 @@ class InraProjectsManager(ATFolder):
 	security = ClassSecurityInfo()
 	_at_rename_after_creation = True
 	
-	
+	_deleteCache = True
 		
 	def getManagedViewsList(self):
 		""" list of views on the projects managed by this projects manager """
@@ -115,11 +126,6 @@ class InraProjectsManager(ATFolder):
 	
 	# ################## CONNECTION RELATED METHODS #################################
 	
-	security.declarePublic('getDBMSName')
-	def getDBMSName(self):
-		""" returns the name of the sgbd """
-		return self._DBMSName
-
 	
 	security.declareProtected(AddInraProjectManager,'addConnection')
 	def addConnection(self,connection_info,**kwargs):
@@ -163,7 +169,7 @@ class InraProjectsManager(ATFolder):
 			self.connection_info = old_connection_info
 			return False
 	
-	
+	# ######### PROJECTS MANAGEMENT
 	
 	def getInraProjects(self,):
 		""" the list of projects actually stored """
@@ -213,47 +219,80 @@ class InraProjectsManager(ATFolder):
 	
 	# ########################## PROJECT CREATION
 	
-	def realize_publicForm_submission(self,REQUEST=None):
+	def realize_publicForm_submission(self,viewFieldsValuesDictionary):
 		""" executes the treatment of submission form by the creation of a new project """
+		
+		
 		
 		person_in_charge = self.project_affectation_script()
 		
-		projectId = self.addInraProjectDbEntry(REQUEST,person_in_charge)
+		projectId = self.getNextProjectId()
 		
-		authenticatedUser = getToolByName(self,'portal_membership').getAuthenticatedMember()
+		customer_in_charge = getToolByName(self,'portal_membership').getAuthenticatedMember()
 		
-		newProject = self.createInraProject(projectId,person_in_charge,authenticatedUser,REQUEST)
+		newProject = self.createInraProject(projectId,person_in_charge,customer_in_charge,viewFieldsValuesDictionary)
 		
 		#newProject._sendProjectCreationNotification()
 		
+		self.publicForm_post_script()
 		
-		REQUEST.response.redirect(newProject.absolute_url())
+		self.REQUEST.response.redirect(newProject.absolute_url())
 		
 		
-	def createInraProject(self,projectId,person_in_charge,customer_in_charge,REQUEST):
+	def createInraProject(self,projectId,person_in_charge,customer_in_charge,viewFieldsValuesDictionary):
 		""" creates the inra project with id projectId managed by person_in_charge, 
-		with the publicForm datas stored in REQUEST """
+		with the publicForm datas stored in viewFieldsValuesDictionary """
 		
 		project_PloneId = 'project_'+str(projectId)
 		getToolByName(self,"portal_types").constructContent('InraProject',self,project_PloneId)
-		obj = self[project_PloneId]
+		newProject = self[project_PloneId]
 		
 		title = "Projet "+str(projectId)+" : "+customer_in_charge.name
 			
-		obj.setTitle(title)
+		newProject.setTitle(title)
+		newProject.confidentiality = self.getDefault_confidentiality() # DON'T USE MUTATORS AT THIS MOMENT (mutator executes sql
+		newProject.person_in_charge = person_in_charge.getId()
+		newProject.customer_in_charge = customer_in_charge.getId()
 		
-		obj.reindexObject()
+		self.addInraProjectDbEntry(newProject)
 		
-		return obj
+		newProject.initProjectViews(viewFieldsValuesDictionary)
+		
+		newProject.reindexObject()
+		
+		return newProject
 	
+	def getNextProjectId(self):
+		if not(hasattr(self,"_getNextProjectIdRequest")) or self._deleteCache:
+			self._getNextProjectIdRequest = FSZSQLMethod(self,NEXT_PROJECT_ID_ZSQLFile)
+			self._getNextProjectIdRequest.connection = self.connection
+			
+		try:
+			nextProjectId = self._getNextProjectIdRequest()[0][0]
+		except psycopg2.ProgrammingError, error_value:
+			if 'currval of sequence "inra_projects_project_id___seq" is not yet defined in this session' in str(error_value):
+				return 1
+			else: raise psycopg2.ProgrammingError, error_value
+		
+		return nextProjectId
+		
+		
 	def _sendProjectCreationNotification(self,newInraProject,REQUEST):
 		""" sends a mail to announce the creation of a new project """
 		
-	def addInraProjectDbEntry(self,REQUEST,person_in_charge):
+	def addInraProjectDbEntry(self,newProject):
 		""" adds the entry of a new project in the database from the public form request datas """
-		projectId = 12
-		return projectId
 		
+		if not(hasattr(self,"_addInraProjectRequest")) or self._deleteCache:
+			self._addInraProjectRequest = FSZSQLMethod(self,ADD_INRA_PROJECT_ZSQLFile)
+			self._addInraProjectRequest.connection = self.connection
+		
+		self._addInraProjectRequest(
+				user_in_charge=newProject.person_in_charge,
+				customer_in_charge=newProject.customer_in_charge,
+				confidentiality=self.getDefault_confidentiality()
+			)
+	
 	
 	
 	
