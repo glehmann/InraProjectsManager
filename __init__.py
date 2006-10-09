@@ -7,6 +7,7 @@ from Products.Archetypes.public import process_types, listTypes
 
 from config import *
 from permissions import *
+from workflows import activate_deactivate_workflow
 
 import content
 
@@ -74,6 +75,11 @@ def initialize(context):
             meta_type = content.PublicProjectForm.PublicProjectForm.archetype_name,
             constructors = (content.PublicProjectForm.addPublicProjectForm,),
             permission = ADD_MANAGER_PERMISSION,
-            )	    
+            )
 	    
+        context.registerClass(
+            meta_type = content.ProjectReports.ProjectReport.archetype_name,
+            constructors = (content.ProjectReports.addProjectReport,),
+            permission = ADD_MANAGER_PERMISSION,
+            )	    	    
 	pass

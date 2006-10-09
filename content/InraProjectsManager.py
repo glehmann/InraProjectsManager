@@ -1,4 +1,5 @@
 import psycopg2
+from DateTime import DateTime
 
 from AccessControl import ClassSecurityInfo
 
@@ -14,18 +15,27 @@ from Products.InraProjectsManager.permissions import AddInraProjectManager, AddI
 
 from Products.CMFCore.FSZSQLMethod import FSZSQLMethod
 
-from ProjectViewModelsManager import ProjectViewModelsManager
 
+
+from ProjectViewModelsManager import ProjectViewModelsManager
 from Products.InraProjectsManager import outils
 from Products.InraProjectsManager.permissions import *
 from Products.InraProjectsManager.config import *
 
+
+
+class StringDate:
+	def __init__(self,date):
+		self.year=date.year
+		self.day=date.day
+		self.month=date.month
+		
 def addInraProjectsManager(self,id,REQUEST=None,**kwargs):
 	""" adds an Inra Projects Manager """
 	object = InraProjectsManager(id,**kwargs)
 	self._setObject(id, object)
 
-	
+
 factory_type_information = (
 	{ 'id':'InraProjectsManager',
 	 'meta_type':'InraProjectsManager',
@@ -57,8 +67,6 @@ factory_type_information = (
 			
 			),
 			
-			
-
 	   'aliases':(
 	    	{'view':'(selected layout)',
 	     	'edit':'atct_edit',
@@ -118,11 +126,9 @@ class InraProjectsManager(ATFolder):
 	_at_rename_after_creation = True
 	
 	_deleteCache = True
-		
-	def getManagedViewsList(self):
-		""" list of views on the projects managed by this projects manager """
-		pass
-
+	
+	def getProjectsManager(self):
+		return self
 	
 	# ################## CONNECTION RELATED METHODS #################################
 	
@@ -190,7 +196,7 @@ class InraProjectsManager(ATFolder):
 		if not(hasattr(self,"models")):
 			getToolByName(self,"portal_types").constructContent('ProjectViewModelsManager',self,'models')
 			obj = self['models']
-			obj.setTitle("Models Manager")
+			obj.setTitle("Configuration Manager")
 			obj.reindexObject()
 			
 		return self.models
@@ -199,6 +205,10 @@ class InraProjectsManager(ATFolder):
 	def getModelsList(self,):
 		""" returns a dict str modelName : obj modelObject, modelObject = False if modelhas not been setup """
 		return self.models.getModelsList()
+	
+	# ############## REPORTS MANAGEMENT RELATED METHODS
+	
+	
 	
 	# ############## PUBLIC FORM RELATED METHODS
 	
@@ -226,16 +236,27 @@ class InraProjectsManager(ATFolder):
 		
 		person_in_charge = self.project_affectation_script()
 		
-		projectId = self.getNextProjectId()
+		
 		
 		customer_in_charge = getToolByName(self,'portal_membership').getAuthenticatedMember()
 		
-		newProject = self.createInraProject(projectId,person_in_charge,customer_in_charge,viewFieldsValuesDictionary)
+		#try:
+		if 1:
+			projectId = self._getCurrentProjectId()
+			self.createInraProject(projectId,person_in_charge,customer_in_charge,viewFieldsValuesDictionary)
 		
+		'''	
+		except:
+			
+			self.connection.manage_close_connection()
+			self.connection.manage_open_connection()
+			projectId = self._getNextProjectId()
+			self.createInraProject(projectId,person_in_charge,customer_in_charge,viewFieldsValuesDictionary)
+		'''
 		#newProject._sendProjectCreationNotification()
 		
 		self.publicForm_post_script()
-		
+		newProject = getattr(self,"project_"+str(projectId))
 		self.REQUEST.response.redirect(newProject.absolute_url())
 		
 		
@@ -244,12 +265,14 @@ class InraProjectsManager(ATFolder):
 		with the publicForm datas stored in viewFieldsValuesDictionary """
 		
 		project_PloneId = 'project_'+str(projectId)
+		
 		getToolByName(self,"portal_types").constructContent('InraProject',self,project_PloneId)
 		newProject = self[project_PloneId]
 		
 		title = "Projet "+str(projectId)+" : "+customer_in_charge.name
 			
 		newProject.setTitle(title)
+		newProject.project_id = projectId
 		newProject.confidentiality = self.getDefault_confidentiality() # DON'T USE MUTATORS AT THIS MOMENT (mutator executes sql
 		newProject.person_in_charge = person_in_charge.getId()
 		newProject.customer_in_charge = customer_in_charge.getId()
@@ -262,31 +285,38 @@ class InraProjectsManager(ATFolder):
 		
 		return newProject
 	
-	def getNextProjectId(self):
+	security.declareProtected(AddInraProjects,"_getNextProjectId")
+	def _getNextProjectId(self):
 		if not(hasattr(self,"_getNextProjectIdRequest")) or self._deleteCache:
-			self._getNextProjectIdRequest = FSZSQLMethod(self,NEXT_PROJECT_ID_ZSQLFile)
+			self._getNextProjectIdRequest = FSZSQLMethod(self,RESTART_PROJECT_ID_ZSQLFile)
 			self._getNextProjectIdRequest.connection = self.connection
-			
-		try:
-			nextProjectId = self._getNextProjectIdRequest()[0][0]
-		except psycopg2.ProgrammingError, error_value:
-			if 'currval of sequence "inra_projects_project_id___seq" is not yet defined in this session' in str(error_value):
-				return 1
-			else: raise psycopg2.ProgrammingError, error_value
 		
-		return nextProjectId
+		
+		return self._getNextProjectIdRequest()[0][0]
+		
+	
+	
+	security.declareProtected(AddInraProjects,"_getCurrentProjectId")
+	def _getCurrentProjectId(self):
+		
+		if not(hasattr(self,"_getCurrentProjectIdRequest")) or self._deleteCache:
+			self._getCurrentProjectIdRequest = FSZSQLMethod(self,NEXT_PROJECT_ID_ZSQLFile)
+			self._getCurrentProjectIdRequest.connection = self.connection
+		
+		
+		return self._getCurrentProjectIdRequest()[0][0]
 		
 		
 	def _sendProjectCreationNotification(self,newInraProject,REQUEST):
 		""" sends a mail to announce the creation of a new project """
-		
+	
 	def addInraProjectDbEntry(self,newProject):
 		""" adds the entry of a new project in the database from the public form request datas """
 		
 		if not(hasattr(self,"_addInraProjectRequest")) or self._deleteCache:
 			self._addInraProjectRequest = FSZSQLMethod(self,ADD_INRA_PROJECT_ZSQLFile)
 			self._addInraProjectRequest.connection = self.connection
-		
+	
 		self._addInraProjectRequest(
 				user_in_charge=newProject.person_in_charge,
 				customer_in_charge=newProject.customer_in_charge,
@@ -294,6 +324,28 @@ class InraProjectsManager(ATFolder):
 			)
 	
 	
+	# OUTILS
 	
+	
+	security.declarePublic("fromStringToDate")
+	def fromStringToDate(self,strdate):
+		""" transforme une string 2006-12-21 en objet zope datetime """
+		try:
+		#if 1:
+			strdate=str(strdate)
+			if strdate=="" or strdate=="None":
+				return None
+			
+			arraydate=strdate.split("-")
+			if len(arraydate)==3 and int(arraydate[0])>1000 and int(arraydate[1])<=12:
+				date = DateTime(int(arraydate[0]),int(arraydate[1]),int(arraydate[2]))
+				return date
+		
+			else:
+				raise ValueError
+		#else:
+		except:
+				raise ValueError, "this string "+str(strdate)+" does not seems not to be a date (jj-mm-yyyy)"
+			
 	
 registerType(InraProjectsManager)

@@ -1,6 +1,8 @@
 from AccessControl import ClassSecurityInfo
 
+
 import psycopg2
+import datetime
 
 from Products.Archetypes.public import Schema, registerType, DisplayList
 from Products.Archetypes.public import StringField, ComputedField, LinesField, IntegerField
@@ -28,7 +30,7 @@ factory_type_information = (
 	   'content_icon':'multiform.gif',
 	    'product':'InraProjectsManager',
 	     'filter_content_types':True,
-	      'allowed_content_types':(),
+	      'allowed_content_types':('ProjectReport'),
 	      'global_allow':False,
 	     'factory':'addProjectViewModelsManager',
 	      'default_view':'edit',
@@ -70,7 +72,12 @@ factory_type_information = (
 		 	'permissions':(AddInraProjectManager,),
 			'condition':'python:"ProjectUsers" in object.getModelsList()'},
 	    		
-
+	    		{'id':'projectDiary',
+	   		'name':'project diary',
+	      		'action':'edit_model?modelName=ProjectDiary',
+		 	'permissions':(AddInraProjectManager,),
+			'condition':'python:"ProjectDiary" in object.getModelsList()'},
+	    		
 		),
 
 	   'aliases':(
@@ -99,7 +106,8 @@ ProjectViewModelsManagerSchema = Schema((
 	   ))
 
 class ProjectViewModelsManager(OrderedBaseFolder):
-	""" contains and manages the data models of the project type managed by this inraProjectsManager 
+	""" contains and manages the data models of the project type managed by this inraProjectsManager
+	contains and manages the reports models
 	"""
 	
 	__implements__ = OrderedBaseFolder.__implements__ + (IProjectViewModelsManager,)
@@ -110,6 +118,9 @@ class ProjectViewModelsManager(OrderedBaseFolder):
 	security = ClassSecurityInfo()
 	_at_rename_after_creation = False
 	
+	# #######################################################################################
+	# #				MODELS MANAGEMENT 					#
+	# #######################################################################################
 	
 	def setModelsList(self,modelsList):
 		self.modelsList = modelsList
@@ -203,24 +214,15 @@ class ProjectViewModelsManager(OrderedBaseFolder):
 		if not modelName in modelsList:
 			raise AttributeError, modelName+" is not a managed view"
 		
-		if not modelName in self.objectIds():
-			self._createModel(modelName)
+		if not modelName in self.models.objectIds():
+			self.models._createModel(modelName)
 		return getattr(self,modelName), modelsList[modelName]
 	
 	
-	'''
-	def getModelOfTable(self,tableName):
-		""" returns the model which table_name is named tableName """
-		modelsList = self.getSetupModels()
-		for model in modelsList:
-			if model.getTableName() == tableName:
-				return model
-	'''		
-		
 	
 	security.declareProtected("_setModel",AddInraProjectManager)
 	def _createModel(self,modelName):
-		getToolByName(self,'portal_types').constructContent('ProjectViewModel',modelName)
+		getToolByName(self,'portal_types').constructContent('ProjectViewModel',self,modelName)
 		obj = self[modelName]
 		obj.setTitle(self._getProjectView(modelName).viewLabel+" model")
 		obj.reindexObject()
@@ -233,22 +235,60 @@ class ProjectViewModelsManager(OrderedBaseFolder):
 		
 		vocabulary = tuple()
 		
-		try:
-			for view in viewsList:
-				viewLabel = view[0]
-				viewName = view[2].__name__
-				vocabulary += ((viewName,viewLabel),)
+		for view in viewsList:
+			viewLabel = view[0]
+			viewName = view[2].__name__
+			vocabulary += ((viewName,viewLabel),)
 				
-		except psycopg2.ProgrammingError:
-			pass
-
 		return DisplayList(vocabulary)
 		
 	
-	# TESTS
-	def test_getProjectViewsList(self):
-		""" tests """
-		return getProjectViewsList()
+	# #######################################################################################
+	# #				REPORT MANAGEMENT 					#
+	# #######################################################################################
 	
-	
+		
+	_reportList = []
+	def getReportList(self,):
+		""" get list of reports -> [obj ProjectReport:projectReport]"""
+		if not self._reportList:
+			for object in self.objectItems():
+
+				if object[1].meta_type == "ProjectReport":
+					self._reportList.append(object[1])
+
+		return self._reportList	
+
+	def getReport(self,reportName):
+		""" get report named reportname -> obj ProjectReport """
+		for report in self.getReportList():
+			if report.getId() == reportName:
+				return report
+		return None
+
+	def setReportList(self,reportList):
+		""" set reports list as -> [str:reportName]"""
+		self._reportList = reportList
+
+	_defaultReport = None
+	def setDefaultReport(self,reportName):
+		""" the report reportName is displayed at View action """
+		self._defaultReport = self.getReport(reportName)
+		for report in self.getReportList():
+			if not report.getId() == reportName:
+				report.unsetDefault()
+
+
+	def getDefaultReport(self,):
+		""" gets the default report """	
+		if not self._defaultReport:
+			if not self.getReportList():
+				return None
+			self._defaultReport = self._reportList[0]
+		return self._defaultReport
+
+
+
+
+
 registerType(ProjectViewModelsManager)

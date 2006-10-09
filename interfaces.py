@@ -69,7 +69,7 @@ class IInraProjectsManager(Base):
 class IInraProject(Base):
 	""" Provides an object that manages a project """
 	
-	
+
 	def getState(self):
 		""" the state of the project : , working, refused, aborted, finished"""
 		
@@ -80,9 +80,11 @@ class IInraProject(Base):
 		""" the confidentiality level : public, inra, confidential"""
 	
 	
-	def getProjectDbKey(self,):
+	def getProject_db_id(self,):
 		""" gets the identifier of that project in the database """
-	
+		
+	# ######################### VIEWS
+		
 	def initProjectViews(self,viewFieldsValuesDictionary):
 		""" creates the views of the project and feed them with public form values """
 		pass
@@ -93,7 +95,26 @@ class IInraProject(Base):
 	
 	def getViews(self):
 		""" returns the dict of views """
+	
+	def show_view(self,viewName):
+		""" displays the view viewName """
 		
+	def submit_updateView_form(self,REQUEST):
+		""" treatment of view form submission : validation and sending updated datas to the view """
+		
+		
+	# ######################## REPORTS
+	
+	def view_default_report(self,):
+		""" view the default report. default View method """
+	
+	def view_report(self,reportName):
+		""" displays the report reportName of that project """
+		
+	def getReport(self,reportName):
+		""" gets the report named reportName in the Configuration Manager """
+
+	
 class IProjectView(Base):
 	""" abstract class interface.
 	a projectView subclass instance provides a view on an aspect of the project : project definition, ressources, reports, etc. 
@@ -102,14 +123,14 @@ class IProjectView(Base):
 	
 	"""
 	
+	def getName(self,):
+		""" get view name """
+	
 	def getModel(self,):
 		""" gets the model for this view, defined in the context of a InraProjectsManager instance 
 		"""
 		pass
 	
-	def getProjectViewId(self,):
-		""" gets the identifiers (a tuple key, value) of that view of that project in the view table """
-		
 	def executeForm(self,**context):
 		""" manages displaying, submission, validation, treatment of the form of that view in the context of this project. always returns XHTML code """
 	
@@ -117,14 +138,59 @@ class IProjectView(Base):
 		""" gets the table of that view """
 		pass
 	
+  	def getViewTitle(self):
+		""" gets view title which is model's one """
+		
+	# ########## FEEDING DATABASE
+	
+	def createDbEntry(self,parent,fieldsValuesDictionary=None):
+		""" feeds the table with datas from the public form """
+	
+	def updateView(self,fieldsValuesDictionary):
+		""" creates a new history entry with fieldsValuesDictionary """
+		
+	# ########## DISPLAY
+	
+	def show_view(self):
+		""" displays the view following their _view_main_template with _main_select_request results """	
+	
+	# ########### REPORT REQUEST
+	def requestReport(self,fieldsList):
+		""" gets a dictionary from fieldsList {id:(label,value|[values])} for report
+		by requesting the database
+				
+		for example 
+		RequestReview.requestReport(self,[description,delay]) ->
+			{'description':('Project request description','A software to manage projects'),
+			 'delay':(DateTime('15-09-2006'))}
+			
+		it may be more complex (redefine getReportDictionary or _report_request_ZSQLFile)
+
+		
+		"""
+		
+	def getReportDictionary(reportRequestResults): # MOSTLY USER DEFINED
+		""" builds the report dictionary from the report results
+				this method may be low-level-user-defined
+		
+		THIS getReportDictionary METHOD :
+			returns the latest value of each field for this project
+		"""
+			
 		
 class IProjectViewModelsManager(Base):
 	""" contains and manages the data models of the project type managed by this projectsManager 
+	contains the report models
 	"""
+	
+	# ################################ MODELS MANAGEMENT
 	
 	def getModelsList(self,):
 		""" returns a dict str model : boolean isSetup, containing each model listed in managedViewsList, with isSetup = True if the model has been setup, and else isSetup = False """
 	
+	def getSetupModels(self):
+		""" returns the list of models that have been setup """
+		
 	def getViewDbTables(self,):
 		""" returns the list of the tables in the database that corresponds to a view managed by this product """
 	
@@ -142,6 +208,23 @@ class IProjectViewModelsManager(Base):
 		
 	def getModelOfTable(self,tableName):
 		""" returns the model which table_name is named tableName """
+	
+	# ################################ REPORTS MANAGEMENT
+	
+	def getReportList(self,):
+		""" get list of reports -> [obj ProjectReport:projectReport]"""
+	
+	def getReport(self,reportName):
+		""" get report named reportname -> obj ProjectReport """
+	
+	def setReportList(self,reportList):
+		""" set reports list as -> [str:reportName]"""
+	
+	def setDefaultReport(self,reportName):
+		""" the report reportName is displayed at View action """
+	
+	def getDefaultReport(self,):
+		""" gets the default report """
 		
 class IProjectViewModel(Base):
 	""" contains information about the database table structure of a view, and its representation in the InraProjectsManager context :
@@ -152,8 +235,8 @@ class IProjectViewModel(Base):
 	and tools to manage them
 	"""
 	
-	""" viewModel are customization
-	    viewClass are functional
+	""" viewModel contains customization
+	    viewClass contains methods
 	"""
 	
 	def addProjectViewModelsManager(self):
@@ -180,7 +263,35 @@ class IProjectViewModel(Base):
 	def editViewProperties(self,REQUEST=None):
 		""" """
 		pass
+	
+
+class IProjectReport(Base):
+	""" ProjectReport objects are a collection of view fields 
+	gathered to display information about the current datas of a project """
+		
+	def getFieldsDictionary(self,):
+		""" get the list of report fields as {str fieldName:str modelName} """
+	
+	def setFieldsDictionary(self,fieldsDictionary):
+		""" set the list of report fields """ 
+		
+	def displayReport(self,):
+		""" displays a report """
+	
+	def customizereport_body(self,):
+		""" displays an editor to modify the template that generates the report """
+		
+	def setCustomized_report_body(self,customizedBody):
+		""" sets the new body """
+	
+	def getReportDictionary(self,project):
+		""" returns the dictionary of ids, labels and datas of this report and the project project, by requesting the views of this project """
+		
+	
+	
+	
 	# ######## PUBLIC FORM : this class provides management for the fields that are used on public form
+	# it provides submission of a project creation by a customer
 
 class IPublicProjectForm(Base):
 	""" The object that manages the form that creates a project """

@@ -26,6 +26,7 @@ from Products.InraProjectsManager import outils
 
 #from Products.PloneDbFormulator.PloneDbFormsManager import PloneDbFormsManager
 
+
 def addPublicProjectForm(self,id,REQUEST=None,**kwargs):
 	""" adds a form manager in the self container """
 	
@@ -60,14 +61,7 @@ factory_type_information = (
 			'action':'edit',
 			'permissions':(AddInraProjectManager,)},
 			
-			
-		{'id':'customizeSQLRequest',
-			'name':'customize request',
-			'action':'customizeSQLRequest',
-			'visible':1,
-			'category':'object_buttons',
-			'permissions':(AddInraProjectManager,)},
-		
+
 		{'id':'customizepre_script_project',
 			'name':'customize pre script',
 			'action':'customizepre_script_project',
@@ -82,27 +76,13 @@ factory_type_information = (
 			'category':'object_buttons',
 			'permissions':(AddInraProjectManager,)},
 			
-		{'id':'customizeForm_body',
-			'name':'customize form',
-			'action':'customizeForm_body',
+		{'id':'customizepublicForm_body',
+			'name':'customize public form',
+			'action':'customizepublicForm_body',
 			'visible':1,
 			'category':'object_buttons',
 			'permissions':(AddInraProjectManager,)},
-			
-		{'id':'customizeResults_body',
-			'name':'customize results list',
-			'action':'customizeResults_body',
-			'visible':1,
-			'category':'object_buttons',
-			'permissions':(AddInraProjectManager,)},
-			
-		{'id':'customizeEntry_body',
-			'name':'customize entry',
-			'action':'customizeEntry_body',
-			'visible':1,
-			'category':'object_buttons',
-			'permissions':(AddInraProjectManager,)},
-			
+					
 		{'id':'customize_form',
 			'name':'customize_form',
 			'action':'customize_form',
@@ -247,11 +227,14 @@ class PublicProjectForm(OrderedBaseFolder):
 		
 		return self.view_form_zptfile(REQUEST=self.REQUEST)
 	
+	log = ""
+	
+	def getLog(self):
+		return self.log
 	
 	def execute_publicForm(self,REQUEST=None):
 		""" displays, validates and controls the public form submission """
-		
-		
+				
 		if REQUEST:
 			
 			try:
@@ -273,16 +256,19 @@ class PublicProjectForm(OrderedBaseFolder):
 
 			else:
 				viewFieldsValuesDictionary = self.getViewFieldsValuesDictionaryFromRequest(REQUEST)
+				self.log= str(self.log) + str(REQUEST.form)+"\n"
 				self.realize_publicForm_submission(viewFieldsValuesDictionary)
 				
-			
 	def emptyForm(self,REQUEST=None,**kwargs):
 
 		""" returns true if the form hasn't yet been completed at all, or false """
 		REQUEST = self.REQUEST
+		if not REQUEST.form.has_key("formulator_submission"): return True
+		if not(REQUEST.form["formulator_submission"]):return True
 		for field in self.form.get_fields():
 			 if REQUEST.get(field.getId()):
 				 return False
+		return True
 
 	#  REQUEST DATA ANALYSE
 	
@@ -296,20 +282,27 @@ class PublicProjectForm(OrderedBaseFolder):
 			fieldName the public fields names
 			value is the request value
 			
+			ONLY VALUED FIELDS ARE RECORDED
+			
 			}
 		"""
 		# getFieldsGroups returns the structure of public form
 		fieldsGroups = self.getFieldsGroups()
 		
+		# values grouped by view
 		viewFieldsValuesDictionary = {}
+		
+		# formatted user values
+		fieldsValues = self.form.validate_all_to_request(REQUEST)
 		
 		for tableName in fieldsGroups:
 			viewClass = self.models.getViewOfTable(tableName)
 			viewFieldsValuesDictionary[viewClass] = {}
 			for publicField in fieldsGroups[tableName]:
 				fieldName = publicField.id
-				value = REQUEST[tableName+"_in_"+publicField.id]
-				viewFieldsValuesDictionary[viewClass][fieldName] = value
+				value = fieldsValues[tableName+"_in_"+publicField.id]
+				if value:
+					viewFieldsValuesDictionary[viewClass][fieldName] = value
 		
 		return viewFieldsValuesDictionary
 			
@@ -329,9 +322,7 @@ class PublicProjectForm(OrderedBaseFolder):
 		return self._fieldsGroups
 			
 	'''
-	def getPublicFieldSQLAdress(self,publicField):
-		fieldId = field.getId()
-		return fieldId.replace('_in_','.')
+
 	'''	
 	 # ######################################################################
 	security.declareProtected(View,'contextFieldsList')
@@ -398,9 +389,10 @@ class PublicProjectForm(OrderedBaseFolder):
 		return NamesStrList
 
 				
-	security.declareProtected(View,'entryRequest')
+	
 	
 	'''
+	security.declareProtected(View,'entryRequest')
 	def entryRequest(self,currentResult):
 		""" builds a link towards an entry from the current results row """
 		
@@ -598,22 +590,14 @@ class PublicProjectForm(OrderedBaseFolder):
 		
 	# ####################### Templates management
 	
-	def customizeForm_body(self,REQUEST=None):
+	security.declareProtected(AddInraProjectManager,"customizepublicForm_body")
+	def customizepublicForm_body(self,REQUEST=None):
 		""" action : copy the post_script_project into the forms manager and make it editable by user """
 		message = self._customizeTemplate("form_body")
-		REQUEST.response.redirect(self.absolute_url()+"/customize_form?customize=form_body&"+message)
+		REQUEST.response.redirect(self.absolute_url()+"/customize_form?customize=publicForm_body&"+message)
 		
-	def customizeEntry_body(self,REQUEST=None):
-		""" action : copy the post_script_project into the forms manager and make it editable by user """
-		message = self._customizeTemplate("entry_body")
-		REQUEST.response.redirect(self.absolute_url()+"/customize_form?customize=entry_body&"+message)
 		
-	def customizeResults_body(self,REQUEST=None):
-		""" action : copy the post_script_project into the forms manager and make it editable by user """
-		message = self._customizeTemplate("results_body")
-		REQUEST.response.redirect(self.absolute_url()+"/customize_form?customize=results_body&"+message)
-	
-	security.declareProtected(AddInraProjectManager,"_customizeScript")
+	security.declareProtected(AddInraProjectManager,"_customizeTemplate")
 	def _customizeTemplate(self,name):
 		message=""
 		if not(name in self.objectIds()): # if no scriptname script in current form manager
@@ -625,20 +609,15 @@ class PublicProjectForm(OrderedBaseFolder):
 			message+="portal_status_message=custom "+name+" has been added"
 			
 		return message
-		
-	def setCustomized_entry_body(self,customizedBody):
-		return self._setCustomizedTemplate(name="entry_body",params="",body=customizedBody)
-		
-	def setCustomize_results_body(self,customizedBody):
-		return self._setCustomizedTemplate(name="results_body",params="",body=customizedBody)
-	 
-	def setCustomized_form_body(self,customizedBody):
-		return self._setCustomizedTemplate(name="form_body",params="",body=customizedBody)
+	
+	security.declareProtected(AddInraProjectManager,"setCustomized_publicForm_body")	
+	def setCustomized_publicForm_body(self,customizedBody):
+		return self._setCustomizedTemplate(name="publicForm_body",params="",body=customizedBody)
 
 	def _setCustomizedTemplate(self,name=None,params=None,body=None):
 		template = getattr(self,name) # gets the first script acquired
 		body=str(body).replace("\r","")
-		template.manage_edit(data=body,title=name)
+		template.manage_edit(data=body)
 		return "custom "+self.labelFromId(name)+" has been saved"		
 		
 		

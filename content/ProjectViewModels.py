@@ -37,11 +37,16 @@ factory_type_information = (
 	      'immediate_view':'fields_properties',
 	      
 	       'actions':({'id':'view',
-	   		'name':'View',
+	   		'name':'View Fields',
 	      		'action':'model_fields_properties_form',
 		 	'permissions':(AddInraProjectManager,),
 			},
-			
+		{'id':'edit',
+			'name':'View Properties',
+			'visible':1,
+			'action':'edit',
+			'permissions':(AddInraProjectManager,)},
+						
 		),
 
 	   'aliases':(
@@ -77,7 +82,7 @@ class ProjectViewModel(OrderedBaseFolder):
 	
 	security = ClassSecurityInfo()
 	
-	_deleteCache = False
+	_deleteCache = True
 	
 	_DbTableStructure = None
 	_fieldsListRequest = None # the zsql request for the table fields 
@@ -99,8 +104,17 @@ class ProjectViewModel(OrderedBaseFolder):
 			self._viewClass = getattr(ProjectViews,self.getId())
 		return self._viewClass
 		
-	
 	# ################################### TABLE STRUCTURE ######################
+	
+	
+	def getUserFieldsIds(self):
+		""" gets the ids of fields defined by user for project type """
+		
+		return [field.getId() for field in self.form.get_fields() if not(field.getId().endswith("__"))]
+	
+	def getUserFields(self):
+		""" gets the Field objects defined by user for project type """
+		return [field for field in self.form.get_fields() if not(field.getId().endswith("__"))]
 	
 	security.declareProtected("getDbTableStructure",AddInraProjectManager)
 	def getDbTableStructure(self,):
@@ -119,7 +133,7 @@ class ProjectViewModel(OrderedBaseFolder):
 		"""
 		
 		
-		if not self._DbTableStructure:
+		if not self._DbTableStructure or self._deleteCache:
 		
 			self._DbTableStructure = {}
 			
@@ -160,7 +174,8 @@ class ProjectViewModel(OrderedBaseFolder):
 		""" """
 		self._DbTableStructure = None
 		return self.getDbTableStructure()
-		
+	
+	
 	# ############################################ FORMS ##################
 	
 	def isSetup(self):
@@ -184,10 +199,10 @@ class ProjectViewModel(OrderedBaseFolder):
 		setattr(self.form,'stored_encoding',"UTF-8")
 		self.form.manage_addProperty("fields_on_public_form",tuple(),"lines")
 		self.initDbTableStructureSave()
-					
+	
 	def setViewProperties(self,REQUEST=None):
 		""" raz the form and rebuilds it with datas from request """
-			
+		
 		parameters = REQUEST.form
 		
 		tableFields = self.getTablePropertiesFromRequest(REQUEST)
@@ -205,9 +220,8 @@ class ProjectViewModel(OrderedBaseFolder):
 			fieldProperties = tableFields[fieldName]
 			
 			#if not(fieldProperties.has_key('primary_key')): fieldProperties['primary_key']=False
-
 			#if not(fieldProperties.has_key('auto_num')): fieldProperties['auto_num']=False
-							
+
 			if not(fieldProperties.has_key('null')): fieldProperties['null']=False
 			if not(fieldProperties.has_key('width')): fieldProperties['width']=0
 			if not(fieldProperties.has_key('on_public_form')): fieldProperties['on_public_form']=False
@@ -261,7 +275,7 @@ class ProjectViewModel(OrderedBaseFolder):
 			else:
 				
 				self.unsetFieldOnPublicForm(fieldName)
-
+			
 			self.editViewField(fieldName,
 					title=fieldProperties['label'],
 					null=fieldProperties['null'],
@@ -322,14 +336,24 @@ class ProjectViewModel(OrderedBaseFolder):
 				
 	
 			
-	# ######## FIELDS / REFERENCE FIELDS	
+	# ######## FORMULATOR FIELDS
+	
+	def getModelField(self,fieldId):
+		return self.form.get_field(fieldId)
+	
+	def getFields(self):
+		return self.form.get_fields()
+	
+	def getUserFields(self):
+		return [field for field in self.form.get_fields() if not(field.getId().endswith("__"))]
+	
 	def addViewField(self,fieldName,
 					fieldType="StringField",
 					title="",
 					primary_key=False,
 					auto_num=False,
 					null=False,
-					width=8,
+					width=0,
 					unique=False):
 		""" adds a reference field with those properties """
 		
@@ -351,18 +375,17 @@ class ProjectViewModel(OrderedBaseFolder):
 					primary_key=False,
 					auto_num=False,
 					null=False,
-					width=8,
+					width=0,
 					unique=False):
 		""" adds a reference field with those properties """
 		
 		if not(title):
 			title = self.labelFromId(fieldName)
 		
-
 		# build field properties from settings
 		field = getattr(self.form,fieldName)
 		
-		self._setFieldSettings(field,title=title,
+		return self._setFieldSettings(field,title=title,
 					null=null,
 					width=width)
 		
@@ -386,7 +409,7 @@ class ProjectViewModel(OrderedBaseFolder):
 	# ######### A REVOIR !!!
 	def _setFieldSettings(self,field,**kwargs):
 		
-		settingsDictionnary = {'required':kwargs.get('null',False),'title':kwargs.get('title',outils.labelFromId(field.__name__)),'unicode':True}
+		settingsDictionnary = {'required':kwargs.get('null',False),'title':kwargs.get('title',outils.labelFromId(field.__name__)),'unicode':False}
 		
 		width = kwargs.get('width',None)
 		
@@ -425,13 +448,16 @@ class ProjectViewModel(OrderedBaseFolder):
 		for setting in settingsDictionnary:
 			field.values[setting] = settingsDictionnary[setting]
 	
-			
+		return field.values
 			
 	security.declareProtected(View,'getViewField')
 	def getViewField(self,fieldName):
 		""" returns the reference field 'fieldName' of table 'tableName' """
-		
-		return getattr(self.form, fieldName)
+		try:
+			return getattr(self.form, fieldName)
+		except AttributeError:
+			self.manage_delObjects(['form'])
+			#self.REQUEST.RESPONSE.redirect(self.absolute_url()+"/model_fields_properties_form")
 	
 	security.declareProtected(View,'getFieldWidth')
 	def getFieldWidth(self,tableName,fieldName):
@@ -450,6 +476,7 @@ class ProjectViewModel(OrderedBaseFolder):
 	
 	def isFieldOnPublicForm(self,fieldName):
 		""" returns true if view fields can be used on public form """
+		if not hasattr(self,"form"): return False
 		if not hasattr(self.form,fieldName): raise AttributeError, "pas de champ" + fieldname
 		return fieldName in self.form.fields_on_public_form
 	

@@ -18,10 +18,11 @@ life__ VARCHAR(10) DEFAULT 'live'
 DROP TABLE project_requests;
 CREATE TABLE project_requests
 (
-	project_id__ INT4 NOT NULL REFERENCES inra_projects,
+	project_requests_project_id__ INT4 NOT NULL REFERENCES inra_projects,
 	request_history_id__ SERIAL PRIMARY KEY,
 	date__ DATE DEFAULT CURRENT_DATE,
-	comment__ VARCHAR(256),
+	comment__ TEXT,
+	user__ VARCHAR(32),
 	descriptif TEXT,
 	delais DATE,
 	urgence VARCHAR(32),
@@ -34,30 +35,36 @@ CREATE TABLE project_requests
 DROP TABLE project_users CASCADE;
 CREATE TABLE project_users
 (
-	user_name__ VARCHAR(32) NOT NULL PRIMARY KEY,
-	nom VARCHAR(32) NOT NULL,
-	mail VARCHAR(32) NOT NULL,
+	user_name VARCHAR(32) NOT NULL PRIMARY KEY,
+	nom VARCHAR(32),
+	mail VARCHAR(32),
 	nom_du_labo VARCHAR(32),
-	nom_de_l_institut VARCHAR(32)
-
+	nom_de_l_institut VARCHAR(32),
+	user__ VARCHAR(32) NOT NULL,
+	date__ DATE DEFAULT CURRENT_DATE,
+	comment__ TEXT,
+	utilisateurs_associes TEXT
 );
 
 DROP TABLE project_users_association;
 CREATE TABLE project_users_association
 (
-	project_id__ INT4 NOT NULL REFERENCES inra_projects,
-	user_name__ VARCHAR(32) NOT NULL REFERENCES project_users, 
-	PRIMARY KEY (project_id__,user_name__)
+	project_users_association_project_id__ INT4 NOT NULL REFERENCES inra_projects,
+	project_users_association_user_name__ VARCHAR(32) NOT NULL REFERENCES project_users, 
+	user__ VARCHAR(32) NOT NULL,
+	date__ DATE DEFAULT CURRENT_DATE,
+	comment__ TEXT,
+	PRIMARY KEY (project_users_association_project_id__,project_users_association_user_name__)
 
 );
 
 DROP TABLE project_results;
 CREATE TABLE project_results
 (
-	project_id__ INT4 NOT NULL REFERENCES inra_projects,
+	project_results_project_id__ INT4 NOT NULL REFERENCES inra_projects,
 	result_history_id__ SERIAL PRIMARY KEY,
+	user__ VARCHAR(32) NOT NULL,
 	date__ DATE DEFAULT CURRENT_DATE,
-	 
 	comment__ TEXT,
 	nom_outil VARCHAR(32),
 	url VARCHAR(32),
@@ -69,9 +76,10 @@ CREATE TABLE project_results
 DROP TABLE project_diaries;
 CREATE TABLE project_diaries
 (
-	project_id__ INT4 NOT NULL REFERENCES inra_projects,
+	project_diaries_project_id__ INT4 NOT NULL REFERENCES inra_projects,
+	user__ VARCHAR(32) NOT NULL,
 	diary_entry_id__ SERIAL PRIMARY KEY,
 	date__ DATE DEFAULT CURRENT_DATE,
-	progress_ INT4,
-	comment_ TEXT
+	progress INT4,
+	comment__ TEXT
 );
